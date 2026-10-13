@@ -26,10 +26,11 @@ class IdmeSampleApp < Sinatra::Base
   # Possible scope values: "military", "student", "responder", "teacher"
   set :scope, ENV.fetch("IDME_SCOPE", use_mock ? "military" : "YOUR_SCOPE_VALUE")
 
-  session_secret = ENV.fetch("SESSION_SECRET") do
+  session_secret = ENV.fetch("SESSION_SECRET", "")
+  if session_secret.empty?
     raise KeyError, "SESSION_SECRET must be set in production" if production?
 
-    SecureRandom.hex(MIN_SESSION_SECRET_BYTES)
+    session_secret = SecureRandom.hex(MIN_SESSION_SECRET_BYTES)
   end
   if session_secret.bytesize < MIN_SESSION_SECRET_BYTES
     raise ArgumentError, "SESSION_SECRET must be at least #{MIN_SESSION_SECRET_BYTES} bytes " \
@@ -38,7 +39,7 @@ class IdmeSampleApp < Sinatra::Base
 
   enable :sessions
   set :session_secret, session_secret
-  set :sessions, httponly: true, same_site: :lax
+  set :sessions, httponly: true, same_site: :lax, secure: production?
 
   set :oauth_client, OAuth2::Client.new(
     settings.client_id,
